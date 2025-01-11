@@ -2,11 +2,15 @@
 
 Not finished yet
 For the moment it works with default nameplate only for all totems, for all expac (Vanilla, TBC, WOTLK), and support also minions (Water elem, Treant, Gargoyle....)
+class icons feature works too
 
 To do :
-- add class icons feature
 - add KuiNameplate support
 - add TremorPulse integrated to the code (but for the moment the separate addon works with it)
+- add an option to enable health bar with icons and anchor healthbar to icons
+- add ElvUI support
+- border color + CreatureType check (Mannen's report)
+- add Tidyplates support
 
 Done :
 - Rewrite all the code to match with new C_Nameplate API (awesome_wotlk patch) to make it lightheight and easier to add other features
