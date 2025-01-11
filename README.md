@@ -1,6 +1,7 @@
 # TotemPlates_awesome_wotlk
 
 Not finished yet
+For the moment it works with default nameplate only for all totems, for all expac (Vanilla, TBC, WOTLK), and support also minions (Water elem, Treant, Gargoyle....)
 
 To do :
 - add class icons feature
