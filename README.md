@@ -6,7 +6,7 @@ For the moment it works with default nameplate only for all totems, for all expa
 To do :
 - add class icons feature
 - add KuiNameplate support
-- add TremorPulse integrated to the code
+- add TremorPulse integrated to the code (but for the moment the separate addon works with it)
 
 Done :
 - Rewrite all the code to match with new C_Nameplate API (awesome_wotlk patch) to make it lightheight and easier to add other features
