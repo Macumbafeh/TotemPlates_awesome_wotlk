@@ -11,3 +11,6 @@ To do :
 Done :
 - Rewrite all the code to match with new C_Nameplate API (awesome_wotlk patch) to make it lightheight and easier to add other features
 - Removed names and added NPCID scan to adapt the addon for all client
+
+
+![image](https://github.com/user-attachments/assets/af9b15ac-fd4c-4f7b-82d0-b043563ee777)
