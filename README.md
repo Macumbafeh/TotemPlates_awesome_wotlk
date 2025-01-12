@@ -18,10 +18,13 @@ Done :
 - An option to enable health bar with icons
 
 Added Borders for class type
+
 ![image](https://github.com/user-attachments/assets/ded2c2ae-9c39-40c2-adb4-5ad4e0e8384a)
 
 and borders for totems based on friendliness
+
 ![image](https://github.com/user-attachments/assets/ce6bf004-7644-4654-90f5-9057ebaf08af)
 
 ![image](https://github.com/user-attachments/assets/af9b15ac-fd4c-4f7b-82d0-b043563ee777)
+
 ![image](https://github.com/user-attachments/assets/44cdb949-c922-42d4-9ca4-bfd9442dc45c)
