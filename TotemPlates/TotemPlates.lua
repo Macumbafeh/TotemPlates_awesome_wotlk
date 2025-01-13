@@ -2,8 +2,9 @@ local AddOn = "TotemPlates"
 
 if not TotemPlatesDB then
     TotemPlatesDB = {
-        TotemPlatesDB = false, -- Default value
-        EnablePartyIcons = false, -- Example default
+        EnablePartyIcons = false,
+		ShowHealthBar = false,
+		EnableBorders = true,
     }
 end
 
@@ -474,7 +475,7 @@ local ClassIcons = {
 
 -- Offsets and scaling for your custom icons
 local xOfs = 0
-local yOfs = 0
+local yOfs = 20
 local iconScale = 0.6
 
 ----------------------------------------------------------------
@@ -524,6 +525,35 @@ local function GetNPCIDFromGUID(guid)
 end
 
 ----------------------------------------------------------------
+-- Helper Function: Update Totem Border Color
+----------------------------------------------------------------
+local function UpdateTotemBorderTexture(namePlate)
+    if not namePlate.totemIconBorder then return end
+    
+    if namePlate.isTargeted then
+        -- Targeted: White border
+        namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderWhite.blp")
+    elseif namePlate.isMouseOver then
+        -- Mouseover: Grey border
+        namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderGrey.blp")
+    else
+        -- Default: Based on friendliness
+        if UnitIsFriend("player", namePlate.unitId) then
+            namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderGreen.blp")
+        else
+            namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderRed.blp")
+        end
+    end
+	
+	
+    
+    -- Simple check: If the texture wasn't set correctly, use default
+    if not namePlate.totemIconBorder:GetTexture() then
+        namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\default.blp")
+    end
+end
+
+----------------------------------------------------------------
 -- Driver Frame + Nameplate Events
 ----------------------------------------------------------------
 local TotemPlatesFrame = CreateFrame("Frame", "TotemPlatesDriverFrame", UIParent)
@@ -531,9 +561,54 @@ TotemPlatesFrame:RegisterEvent("NAME_PLATE_CREATED")
 TotemPlatesFrame:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 TotemPlatesFrame:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
 TotemPlatesFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+TotemPlatesFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 
 -- Use a local table to keep track of nameplates if you want
 local namePlateRegistry = {}
+
+-- OnUpdate function for manual mouseover detection
+local function OnUpdate(self, elapsed)
+    -- Get cursor position in UIParent coordinates
+    local cursorX, cursorY = GetCursorPosition()
+    local scale = UIParent:GetEffectiveScale()
+    cursorX = cursorX / scale
+    cursorY = cursorY / scale
+    
+    for namePlate, _ in pairs(namePlateRegistry) do
+        if namePlate.isTotem then
+            local totemIcon = namePlate.totemIcon
+            if totemIcon and totemIcon:IsVisible() then
+                local totemX, totemY = totemIcon:GetCenter()
+                if totemX and totemY then
+                    local width = totemIcon:GetWidth()
+                    local height = totemIcon:GetHeight()
+                    
+                    local totemLeft = totemX - (width / 2)
+                    local totemRight = totemX + (width / 2)
+                    local totemBottom = totemY - (height / 2)
+                    local totemTop = totemY + (height / 2)
+                    
+                    if cursorX >= totemLeft and cursorX <= totemRight and
+                       cursorY >= totemBottom and cursorY <= totemTop then
+                        if not namePlate.isMouseOver then
+                            namePlate.isMouseOver = true
+                            UpdateTotemBorderTexture(namePlate)
+                        end
+                    else
+                        if namePlate.isMouseOver then
+                            namePlate.isMouseOver = false
+                            UpdateTotemBorderTexture(namePlate)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Attach the OnUpdate script
+TotemPlatesFrame:SetScript("OnUpdate", OnUpdate)
+
 
 local function HideDefaultNameplateElements(frame)
     if not frame or not frame:GetRegions() then return end
@@ -547,8 +622,12 @@ local function HideDefaultNameplateElements(frame)
     if level then level:Hide() end
 
     -- Hide the health bar (and possibly cast bar) from GetChildren()
-    local HealthBar, CastBar = frame:GetChildren()
-    if HealthBar then HealthBar:Hide() end
+    local HealthBar = frame:GetChildren()
+	if TotemPlatesDB.ShowHealthBar then
+		if HealthBar then HealthBar:Show() end
+	else
+		if HealthBar then HealthBar:Hide() end
+	end
 end
 
 local function ShowDefaultNameplateElements(frame)
@@ -561,7 +640,7 @@ local function ShowDefaultNameplateElements(frame)
     if oldname then oldname:Show() end
     if level then level:Show() end
 
-    local HealthBar, CastBar = frame:GetChildren()
+    local HealthBar = frame:GetChildren()
     if HealthBar then HealthBar:Show() end
 end
 
@@ -578,7 +657,9 @@ local function OnNamePlateUnitAdded(unitId)
     local guid = UnitGUID(unitId)
     local name = UnitName(unitId) or ""
     local npcID = GetNPCIDFromGUID(guid)
-
+	
+	namePlate.unitId = unitId -- Store unitId for later reference
+	
     -- 1) If it's one of your "snake" NPCs (optional)
     if npcID and SnakeNpcIDs[npcID] then
         -- You can show or partially hide. 
@@ -589,6 +670,8 @@ local function OnNamePlateUnitAdded(unitId)
     -- 2) Check if it’s a recognized Totem by NPC ID
     if npcID and TotemNpcIDs[npcID] then
         HideDefaultNameplateElements(namePlate)
+		namePlate.isTotem = true -- Identification flag
+		
         local totemData = TotemNpcIDs[npcID]
 
         -- Create or show a custom totem icon
@@ -602,6 +685,76 @@ local function OnNamePlateUnitAdded(unitId)
         -- Use the texture from the table; fallback if missing
         namePlate.totemIcon:SetTexture(totemData.texture or "Interface\\Icons\\INV_Misc_QuestionMark")
         namePlate.totemIcon:SetSize(64 * iconScale, 64 * iconScale)
+		
+		
+		-- Add Border Around Totem Icon
+		if TotemPlatesDB.EnableBorders then
+			if not namePlate.totemIconBorder then
+				namePlate.totemIconBorder = namePlate:CreateTexture(nil, "OVERLAY")
+    
+				-- Determine which border texture to use based on friendliness
+				if UnitIsFriend("player", unitId) then
+					namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderGreen.blp")
+				else
+					namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderRed.blp")
+				end
+    
+				namePlate.totemIconBorder:SetSize(150 * iconScale, 150 * iconScale) -- Adjust size as needed
+				namePlate.totemIconBorder:SetPoint("CENTER", namePlate.totemIcon, "CENTER", 0, 0)
+				namePlate.totemIconBorder:SetDrawLayer("OVERLAY", 3)
+				namePlate.totemIconBorder:SetTexCoord(0, 1, 0, 1)
+				namePlate.totemIconBorder:SetBlendMode("ADD")
+				
+				-- Initialize color based on friendliness
+                UpdateTotemBorderTexture(namePlate)
+			else
+				namePlate.totemIconBorder:Show()
+    
+				-- Update border texture based on current status
+				if UnitIsFriend("player", unitId) then
+					namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderGreen.blp")
+				else
+					namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderRed.blp")
+				end
+				-- Update color based on current state
+                UpdateTotemBorderTexture(namePlate)
+			end
+		else
+            -- If borders are disabled, hide the border texture if it exists
+            if namePlate.totemIconBorder then
+                namePlate.totemIconBorder:Hide()
+            end
+		end
+		
+		if UnitIsUnit(unitId, "target") then
+            namePlate.isTargeted = true
+            UpdateTotemBorderTexture(namePlate)
+        else
+            namePlate.isTargeted = false
+        end
+		
+		-- Attach Mouseover Scripts for Totem Icon Border
+       --[[ if TotemPlatesDB.EnableBorders then
+            if namePlate.isTotem and not namePlate.hasMouseScripts then
+                -- Enable mouse interactions on the nameplate frame
+                namePlate:EnableMouse(false)
+
+                -- Attach OnEnter and OnLeave scripts
+                namePlate:SetScript("OnEnter", function(self)
+                    self.isMouseOver = true
+                    UpdateTotemBorderTexture(self)
+                    -- Optional Debugging
+                    -- print("Mouse Over:", self.unitId)
+                end)
+                namePlate:SetScript("OnLeave", function(self)
+                    self.isMouseOver = false
+                    UpdateTotemBorderTexture(self)
+                    -- Optional Debugging
+                    -- print("Mouse Leave:", self.unitId)
+                end)
+                namePlate.hasMouseScripts = true -- Prevent reattaching scripts
+            end
+        end ]]
         return
     end
 
@@ -610,6 +763,8 @@ local function OnNamePlateUnitAdded(unitId)
         local classIcon = GetClassIcon(name)
         if classIcon then
             HideDefaultNameplateElements(namePlate)
+			namePlate.isParty = true -- Identification flag
+			
             if not namePlate.partyIcon then
                 namePlate.partyIcon = namePlate:CreateTexture(nil, "BACKGROUND")
                 namePlate.partyIcon:SetPoint("CENTER", namePlate, "CENTER", xOfs, yOfs)
@@ -618,6 +773,42 @@ local function OnNamePlateUnitAdded(unitId)
             end
             namePlate.partyIcon:SetTexture(classIcon)
             namePlate.partyIcon:SetSize(64 * iconScale, 64 * iconScale)
+			
+			-- Add Border Around Party Class Icon
+        if TotemPlatesDB.EnableBorders then
+            if not namePlate.partyIconBorder then
+                namePlate.partyIconBorder = namePlate:CreateTexture(nil, "OVERLAY")
+                local _, class = UnitClass(unitId)
+                if class then
+                    local borderTexturePath = "Interface\\AddOns\\TotemPlates\\Textures\\border\\" .. string.lower(class) .. ".blp"
+                    namePlate.partyIconBorder:SetTexture(borderTexturePath)
+                else
+                    -- Fallback to default border if class is not determined
+                    namePlate.partyIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\default.blp")
+                end
+                namePlate.partyIconBorder:SetSize(80 * iconScale, 80 * iconScale) -- Slightly larger than icon
+                namePlate.partyIconBorder:SetPoint("CENTER", namePlate.partyIcon, "CENTER", 0, 0)
+                namePlate.partyIconBorder:SetDrawLayer("OVERLAY", 3)
+                namePlate.partyIconBorder:SetTexCoord(0, 1, 0, 1)
+                namePlate.partyIconBorder:SetBlendMode("ADD")
+            else
+                namePlate.partyIconBorder:Show()
+                -- Update border texture based on current class
+                local _, class = UnitClass(unitId)
+                if class then
+                    local borderTexturePath = "Interface\\AddOns\\TotemPlates\\Textures\\border\\" .. string.lower(class) .. ".blp"
+                    namePlate.partyIconBorder:SetTexture(borderTexturePath)
+                else
+                    -- Fallback to default border if class is not determined
+                    namePlate.partyIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\default.blp")
+                end
+            end
+        else
+            -- If borders are disabled, hide the border texture if it exists
+            if namePlate.partyIconBorder then
+                namePlate.partyIconBorder:Hide()
+            end
+        end
             return
         end
     end
@@ -628,6 +819,12 @@ local function OnNamePlateUnitAdded(unitId)
     end
     if namePlate.partyIcon then
         namePlate.partyIcon:Hide()
+    end
+	if namePlate.totemIconBorder then
+        namePlate.totemIconBorder:Hide()
+    end
+	if namePlate.partyIconBorder then
+        namePlate.partyIconBorder:Hide()
     end
     ShowDefaultNameplateElements(namePlate)
 end
@@ -644,7 +841,19 @@ local function OnNamePlateUnitRemoved(unitId)
     if namePlate.partyIcon then
         namePlate.partyIcon:Hide()
     end
-
+	if namePlate.totemIconBorder then
+        namePlate.totemIconBorder:Hide()
+    end
+	if namePlate.partyIconBorder then
+        namePlate.partyIconBorder:Hide()
+    end
+	
+	-- Reset state flags
+    namePlate.isTotem = nil
+    namePlate.isParty = nil
+    namePlate.isTargeted = nil
+    namePlate.isMouseOver = nil
+	
     ShowDefaultNameplateElements(namePlate)
 end
 
@@ -659,9 +868,6 @@ TotemPlatesFrame:SetScript("OnEvent", function(self, event, ...)
         end
         -- Load the saved setting for party icons
         EnablePartyIcons = TotemPlatesDB.EnablePartyIcons
-        local status = EnablePartyIcons and "|cff00ff00enabled|r" or "|cffff0000disabled|r"
-        print("|cff00ccffTotemPlates|r: Party icons are " .. status .. ".")
-
     elseif event == "NAME_PLATE_CREATED" then
         local frame = ...
         SkinNamePlateFrame(frame)
@@ -673,6 +879,18 @@ TotemPlatesFrame:SetScript("OnEvent", function(self, event, ...)
     elseif event == "NAME_PLATE_UNIT_REMOVED" then
         local unit = ...
         OnNamePlateUnitRemoved(unit)
+	elseif event == "PLAYER_TARGET_CHANGED" then
+        -- Update targeted status for all totem nameplates
+        local currentTarget = "target"
+        for namePlate, _ in pairs(namePlateRegistry) do
+            if namePlate.isTotem and UnitIsUnit(namePlate.unitId, currentTarget) then
+                namePlate.isTargeted = true
+            else
+                namePlate.isTargeted = false
+            end
+            -- Update the border color based on the new state
+            UpdateTotemBorderTexture(namePlate)
+        end
     end
 end)
 
@@ -695,13 +913,33 @@ StaticPopupDialogs["TOTEMPLATES_RELOAD_UI"] = {
 SLASH_TOTEMPLATES1 = "/totemplates"
 SLASH_TOTEMPLATES2 = "/tm"
 SlashCmdList["TOTEMPLATES"] = function(msg)
-    if msg == "partyicons" then
+	local status1 = EnablePartyIcons and "|cff00ff00enabled|r" or "|cffff0000disabled|r"
+	local status2 = TotemPlatesDB.ShowHealthBar and "|cff00ff00enabled|r" or "|cffff0000disabled|r"
+	local status3 = TotemPlatesDB.EnableBorders and "|cff00ff00enabled|r" or "|cffff0000disabled|r"
+    if msg == "partyicons" or msg == "partyicon" then
         TotemPlatesDB.EnablePartyIcons = not TotemPlatesDB.EnablePartyIcons
         EnablePartyIcons = TotemPlatesDB.EnablePartyIcons
-        local status = EnablePartyIcons and "|cff00ff00enabled|r" or "|cffff0000disabled|r"
-        print("|cff00ccffTotemPlates|r: Party icons are now " .. status .. ".")
+        
+        -- print("|cff00ccffTotemPlates|r: Party icons are now " .. status1 .. ".")
         StaticPopup_Show("TOTEMPLATES_RELOAD_UI")
+	elseif msg == "healthbar" or msg == "healthbars" then
+        TotemPlatesDB.ShowHealthBar = not TotemPlatesDB.ShowHealthBar
+       -- print("|cff00ccffTotemPlates|r: Health bar is now " .. status2 .. ".")
+        StaticPopup_Show("TOTEMPLATES_RELOAD_UI")
+	elseif msg == "border" or msg == "borders" then
+        TotemPlatesDB.EnableBorders = not TotemPlatesDB.EnableBorders
+       -- print("|cff00ccffTotemPlates|r: Borders are now " .. status3 .. ".")
+        StaticPopup_Show("TOTEMPLATES_RELOAD_UI")
+    elseif msg == "status" then
+		print("Totemplates statut:")
+		print("|cff00ccffTotemPlates|r: Party icons are now " .. status1 .. ".")
+		print("|cff00ccffTotemPlates|r: Health bars are now " .. status2 .. ".")
+		print("|cff00ccffTotemPlates|r: Borders are now " .. status3 .. ".")
     else
-        print("|cff00ccffTotemPlates|r: Usage: /totemplates partyicons - Toggle party member class icons.")
+		print("Totemplates usage:")
+        print("|cff00ccff/totemplates partyicon|r: - Toggle party member class icons.")
+		print("|cff00ccff/totemplates healthbar|r - Toggle health bar visibility.")	
+		print("|cff00ccff/totemplates border|r - Toggle borders visibility.")
+        print("|cff00ccff/totemplates status|r - Show the current status of options.")
     end
 end
