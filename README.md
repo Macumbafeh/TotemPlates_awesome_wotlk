@@ -6,7 +6,7 @@ class icons feature works too
 
 To do :
 - add KuiNameplate support
-- add TremorPulse integrated to the code (but for the moment the separate addon works with it)
+- add TremorPulse integrated to the code (but for the moment the separate addon works with it), and put the timer inside the icon and color it white
 - add ElvUI support
 
 Done :
