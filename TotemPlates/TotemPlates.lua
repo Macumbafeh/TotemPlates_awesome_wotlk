@@ -7,7 +7,7 @@ if not TotemPlatesDB then
 		EnableBorders = true,
     }
 end
-
+local mPlate = {}
 
 local TotemNpcIDs = {
     -- [npcID] = { 
@@ -532,16 +532,16 @@ local function UpdateTotemBorderTexture(namePlate)
     
     if namePlate.isTargeted then
         -- Targeted: White border
-        namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderWhite.blp")
+        namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\borderWhite.blp")
     elseif namePlate.isMouseOver then
         -- Mouseover: Grey border
-        namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderGrey.blp")
+        namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\borderGreyBlue.blp")
     else
         -- Default: Based on friendliness
         if UnitIsFriend("player", namePlate.unitId) then
-            namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderGreen.blp")
+            namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\borderGreen.blp")
         else
-            namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderRed.blp")
+            namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\borderRed.blp")
         end
     end
 	
@@ -566,48 +566,7 @@ TotemPlatesFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 -- Use a local table to keep track of nameplates if you want
 local namePlateRegistry = {}
 
--- OnUpdate function for manual mouseover detection
-local function OnUpdate(self, elapsed)
-    -- Get cursor position in UIParent coordinates
-    local cursorX, cursorY = GetCursorPosition()
-    local scale = UIParent:GetEffectiveScale()
-    cursorX = cursorX / scale
-    cursorY = cursorY / scale
-    
-    for namePlate, _ in pairs(namePlateRegistry) do
-        if namePlate.isTotem then
-            local totemIcon = namePlate.totemIcon
-            if totemIcon and totemIcon:IsVisible() then
-                local totemX, totemY = totemIcon:GetCenter()
-                if totemX and totemY then
-                    local width = totemIcon:GetWidth()
-                    local height = totemIcon:GetHeight()
-                    
-                    local totemLeft = totemX - (width / 2)
-                    local totemRight = totemX + (width / 2)
-                    local totemBottom = totemY - (height / 2)
-                    local totemTop = totemY + (height / 2)
-                    
-                    if cursorX >= totemLeft and cursorX <= totemRight and
-                       cursorY >= totemBottom and cursorY <= totemTop then
-                        if not namePlate.isMouseOver then
-                            namePlate.isMouseOver = true
-                            UpdateTotemBorderTexture(namePlate)
-                        end
-                    else
-                        if namePlate.isMouseOver then
-                            namePlate.isMouseOver = false
-                            UpdateTotemBorderTexture(namePlate)
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
 
--- Attach the OnUpdate script
-TotemPlatesFrame:SetScript("OnUpdate", OnUpdate)
 
 
 local function HideDefaultNameplateElements(frame)
@@ -694,12 +653,12 @@ local function OnNamePlateUnitAdded(unitId)
     
 				-- Determine which border texture to use based on friendliness
 				if UnitIsFriend("player", unitId) then
-					namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderGreen.blp")
+					namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\borderGreen.blp")
 				else
-					namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderRed.blp")
+					namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\borderRed.blp")
 				end
     
-				namePlate.totemIconBorder:SetSize(150 * iconScale, 150 * iconScale) -- Adjust size as needed
+				namePlate.totemIconBorder:SetSize(80 * iconScale, 80* iconScale) -- Adjust size as needed
 				namePlate.totemIconBorder:SetPoint("CENTER", namePlate.totemIcon, "CENTER", 0, 0)
 				namePlate.totemIconBorder:SetDrawLayer("OVERLAY", 3)
 				namePlate.totemIconBorder:SetTexCoord(0, 1, 0, 1)
@@ -709,13 +668,7 @@ local function OnNamePlateUnitAdded(unitId)
                 UpdateTotemBorderTexture(namePlate)
 			else
 				namePlate.totemIconBorder:Show()
-    
-				-- Update border texture based on current status
-				if UnitIsFriend("player", unitId) then
-					namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderGreen.blp")
-				else
-					namePlate.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\totemborderRed.blp")
-				end
+				
 				-- Update color based on current state
                 UpdateTotemBorderTexture(namePlate)
 			end
@@ -725,36 +678,33 @@ local function OnNamePlateUnitAdded(unitId)
                 namePlate.totemIconBorder:Hide()
             end
 		end
-		
-		if UnitIsUnit(unitId, "target") then
-            namePlate.isTargeted = true
-            UpdateTotemBorderTexture(namePlate)
-        else
-            namePlate.isTargeted = false
-        end
-		
-		-- Attach Mouseover Scripts for Totem Icon Border
-       --[[ if TotemPlatesDB.EnableBorders then
-            if namePlate.isTotem and not namePlate.hasMouseScripts then
-                -- Enable mouse interactions on the nameplate frame
-                namePlate:EnableMouse(false)
 
-                -- Attach OnEnter and OnLeave scripts
-                namePlate:SetScript("OnEnter", function(self)
-                    self.isMouseOver = true
-                    UpdateTotemBorderTexture(self)
-                    -- Optional Debugging
-                    -- print("Mouse Over:", self.unitId)
-                end)
-                namePlate:SetScript("OnLeave", function(self)
-                    self.isMouseOver = false
-                    UpdateTotemBorderTexture(self)
-                    -- Optional Debugging
-                    -- print("Mouse Leave:", self.unitId)
-                end)
-                namePlate.hasMouseScripts = true -- Prevent reattaching scripts
-            end
-        end ]]
+		if not mPlate[namePlate] then
+			mPlate[namePlate] = true
+        
+			namePlate.isMouseover = false
+			namePlate:SetScript("OnUpdate", function(self)
+				local isMouseOverNow = self:IsMouseOver()
+            
+				if isMouseOverNow and not self.isMouseover then
+					self.isMouseover = true
+					self.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\borderGreyBlue.blp")
+				elseif not isMouseOverNow and self.isMouseover then
+					self.isMouseover = false
+					if UnitIsFriend("player", unitId) then
+						self.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\borderGreen.blp")
+					else
+						self.totemIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\borderRed.blp")
+					end
+					if UnitIsUnit(unitId, "target") then
+						self.isTargeted = true
+						UpdateTotemBorderTexture(self)
+					else
+						self.isTargeted = false
+					end
+				end
+			end)
+		end
         return
     end
 
