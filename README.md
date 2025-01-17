@@ -26,6 +26,10 @@ and borders for totems based on friendliness
 
 ![image](https://github.com/user-attachments/assets/44cdb949-c922-42d4-9ca4-bfd9442dc45c)
 
+New totem border texture 
+
+![image](https://github.com/user-attachments/assets/2b4be36a-2806-4183-9911-86f369143434)
+
 Healthbar feature for totems and party members icons
 
 ![image](https://github.com/user-attachments/assets/de260f15-fcad-41ca-b115-464528db30f6)
