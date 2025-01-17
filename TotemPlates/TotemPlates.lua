@@ -736,7 +736,7 @@ local function OnNamePlateUnitAdded(unitId)
                     -- Fallback to default border if class is not determined
                     namePlate.partyIconBorder:SetTexture("Interface\\AddOns\\TotemPlates\\Textures\\border\\default.blp")
                 end
-                namePlate.partyIconBorder:SetSize(80 * iconScale, 80 * iconScale) -- Slightly larger than icon
+                namePlate.partyIconBorder:SetSize(72 * iconScale, 72 * iconScale) -- Slightly larger than icon
                 namePlate.partyIconBorder:SetPoint("CENTER", namePlate.partyIcon, "CENTER", 0, 0)
                 namePlate.partyIconBorder:SetDrawLayer("OVERLAY", 3)
                 namePlate.partyIconBorder:SetTexCoord(0, 1, 0, 1)
