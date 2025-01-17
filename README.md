@@ -8,13 +8,12 @@ To do :
 - add KuiNameplate support
 - add TremorPulse integrated to the code (but for the moment the separate addon works with it)
 - add ElvUI support
-- border color + CreatureType check (Mannen's report)
 
 Done :
-- Rewrited all the code to match with new C_Nameplate API (awesome_wotlk patch) to make it lightheight and easier to add other features
+- Rewrited all the code to match with new C_Nameplate API (awesome_wotlk patch) it's lightheight and easier to add other features
 - Removed names and added NPCID scan to adapt the addon for all clients
 - added an other icon for Venomous Snake instead to have the same one than Viper
-- border color
+- border color with new texture (red for enemy, green for friendly, blue when you mouse over hover it, white when you target it)
 - An option to enable health bar with icons
 
 Added Borders for class type
