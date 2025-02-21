@@ -10,7 +10,7 @@ To do :
 - add ElvUI support
 
 Done :
-- Rewrited all the code to match with new C_Nameplate API (awesome_wotlk patch) it's lightheight and easier to add other features
+- Rewrited all the code to match with new C_Nameplate API (awesome_wotlk patch) it's lightweight and easier to add other features
 - Removed names and added NPCID scan to adapt the addon for all clients
 - added an other icon for Venomous Snake instead to have the same one than Viper
 - border color with new texture (red for enemy, green for friendly, blue when you mouse over hover it, white when you target it)
